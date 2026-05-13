@@ -164,6 +164,48 @@ All configuration via environment variables:
 
 ---
 
+## Container
+
+The discord-mcp server ([SaseQ/discord-mcp](https://github.com/SaseQ/discord-mcp)) is Java/Spring Boot. Rather than embed Java in the main container, it runs as a per-bot sidecar in HTTP mode. Each spawned CLI connects to its sidecar over localhost.
+
+### Main container (`summoner`)
+
+Multi-stage Dockerfile:
+
+```dockerfile
+# Stage 1: build Go binary
+FROM golang:1.22 AS builder
+WORKDIR /build
+COPY . .
+RUN CGO_ENABLED=0 go build -o summoner ./cmd/summoner
+
+# Stage 2: runtime
+FROM node:22-slim
+
+# Claude Code and Gemini CLI
+RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli
+
+# Pre-bake Claude MCP config (discord-mcp sidecar at localhost:8085)
+RUN mkdir -p /root/.claude
+COPY deploy/claude-settings.json /root/.claude/settings.json
+
+# Pre-bake Gemini MCP config (discord-mcp sidecar at localhost:8086)
+COPY deploy/gemini-settings.json /root/.gemini/settings.json
+
+# Summoner binary
+COPY --from=builder /build/summoner /usr/local/bin/summoner
+
+ENTRYPOINT ["summoner"]
+```
+
+`deploy/claude-settings.json` configures the discord MCP as an HTTP server at `http://localhost:8085/sse`. `deploy/gemini-settings.json` does the same at port 8086.
+
+### Sidecars
+
+Two instances of `saseq/discord-mcp:latest`, one per bot, run alongside the main container in the same pod. They start in HTTP mode (`SPRING_PROFILES_ACTIVE=http`) on different ports.
+
+---
+
 ## Deployment
 
 Single-replica k8s Deployment. No HA concerns — sessions are in-memory in one process, and session loss on pod restart is acceptable (short sessions by design).
@@ -182,6 +224,33 @@ containers:
       - name: nfs-shared
         mountPath: /nfs/shared
         readOnly: true
+
+  - name: discord-mcp-claude
+    image: saseq/discord-mcp:latest
+    env:
+      - name: DISCORD_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: summoner-secrets
+            key: BTCLAUDE_TOKEN
+      - name: SPRING_PROFILES_ACTIVE
+        value: http
+      - name: SERVER_PORT
+        value: "8085"
+
+  - name: discord-mcp-gemini
+    image: saseq/discord-mcp:latest
+    env:
+      - name: DISCORD_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: summoner-secrets
+            key: BTGEMINI_TOKEN
+      - name: SPRING_PROFILES_ACTIVE
+        value: http
+      - name: SERVER_PORT
+        value: "8086"
+
 volumes:
   - name: nfs-shared
     nfs:

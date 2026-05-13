@@ -14,7 +14,7 @@ type ActiveModel struct {
 
 // Session tracks a single active consulting session in one Discord channel.
 type Session struct {
-	ChannelID string
+	ChannelID string // Discord channel ID this session belongs to
 	mu        sync.Mutex
 	models    map[string]*ActiveModel
 	timer     *time.Timer

@@ -1,6 +1,7 @@
 package session_test
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -54,27 +55,27 @@ func TestSession_TimerFires(t *testing.T) {
 
 func TestSession_TimerReset(t *testing.T) {
 	s := session.NewSession("chan1")
-	count := 0
-	s.ResetTimer(50*time.Millisecond, func() { count++ })
+	var count atomic.Int32
+	s.ResetTimer(50*time.Millisecond, func() { count.Add(1) })
 	time.Sleep(20 * time.Millisecond)
-	s.ResetTimer(50*time.Millisecond, func() { count++ })
+	s.ResetTimer(50*time.Millisecond, func() { count.Add(1) })
 	time.Sleep(20 * time.Millisecond)
-	if count != 0 {
+	if count.Load() != 0 {
 		t.Fatal("timer fired before reset period elapsed")
 	}
 	time.Sleep(100 * time.Millisecond)
-	if count != 1 {
-		t.Fatalf("expected 1 fire after reset, got %d", count)
+	if count.Load() != 1 {
+		t.Fatalf("expected 1 fire after reset, got %d", count.Load())
 	}
 }
 
 func TestSession_StopTimer(t *testing.T) {
 	s := session.NewSession("chan1")
-	fired := false
-	s.ResetTimer(50*time.Millisecond, func() { fired = true })
+	fired := make(chan struct{}, 1)
+	s.ResetTimer(50*time.Millisecond, func() { fired <- struct{}{} })
 	s.StopTimer()
 	time.Sleep(100 * time.Millisecond)
-	if fired {
+	if len(fired) > 0 {
 		t.Fatal("timer fired after stop")
 	}
 }

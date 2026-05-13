@@ -69,6 +69,9 @@ func TestParse_SummonGeminiPro(t *testing.T) {
 	if cmd.Variant != "pro" {
 		t.Fatalf("expected pro, got %q", cmd.Variant)
 	}
+	if cmd.Prompt != "review the schema" {
+		t.Fatalf("unexpected prompt: %q", cmd.Prompt)
+	}
 }
 
 func TestParse_SummonBoth(t *testing.T) {

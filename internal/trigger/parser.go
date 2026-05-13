@@ -4,14 +4,16 @@ import (
 	"strings"
 )
 
+// CommandType identifies the kind of command parsed from a Discord mention.
 type CommandType int
 
 const (
-	CommandUnknown CommandType = iota
-	CommandSummon
-	CommandDismiss
+	CommandUnknown CommandType = iota // mention present but unrecognized token
+	CommandSummon                     // request to summon a model
+	CommandDismiss                    // request to end the active session
 )
 
+// Command is the result of parsing a Discord message that mentions the Summoner bot.
 type Command struct {
 	Type    CommandType
 	Model   string // "claude", "gemini", "both"

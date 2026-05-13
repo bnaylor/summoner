@@ -155,8 +155,10 @@ All configuration via environment variables:
 | Variable | Purpose | Default |
 |---|---|---|
 | `SUMMONER_TOKEN` | Summoner bot's Discord token | required |
-| `BTCLAUDE_TOKEN` | Passed to `claude` spawns as Discord MCP token | required if claude used |
-| `BTGEMINI_TOKEN` | Passed to `gemini` spawns as Discord MCP token | required if gemini used |
+| `BTCLAUDE_TOKEN` | Passed to discord-mcp-claude sidecar | required if claude used |
+| `BTGEMINI_TOKEN` | Passed to discord-mcp-gemini sidecar | required if gemini used |
+| `ANTHROPIC_API_KEY` | Inherited by spawned `claude` processes | required if claude used |
+| `GEMINI_API_KEY` | Inherited by spawned `gemini` processes | required if gemini used |
 | `NFS_MOUNT` | Working directory for spawned CLIs | `/nfs/shared` |
 | `INACTIVITY_TIMEOUT` | Session idle timeout | `20m` |
 | `CLAUDE_DEFAULT_MODEL` | Claude model when no variant specified | CLI default |
@@ -170,35 +172,16 @@ The discord-mcp server ([SaseQ/discord-mcp](https://github.com/SaseQ/discord-mcp
 
 ### Main container (`summoner`)
 
-Multi-stage Dockerfile:
+See `Dockerfile` at the repo root. Multi-stage build:
 
-```dockerfile
-# Stage 1: build Go binary
-FROM golang:1.22 AS builder
-WORKDIR /build
-COPY . .
-RUN CGO_ENABLED=0 go build -o summoner ./cmd/summoner
+1. **Go builder stage** (`golang:1.22-alpine`) — downloads deps, compiles the `summoner` binary.
+2. **Runtime stage** (`node:22-slim`) — installs `@anthropic-ai/claude-code` and `@google/gemini-cli` via npm (intentionally unpinned; rebuild weekly to stay current), copies in pre-baked MCP configs, copies the Go binary.
 
-# Stage 2: runtime
-FROM node:22-slim
+MCP configs are in `deploy/`:
+- `claude-settings.json` → `/root/.claude/settings.json`: points claude-code at the discord-mcp sidecar on `http://localhost:8085/mcp`
+- `gemini-settings.json` → `/root/.gemini/settings.json`: points gemini-cli at its sidecar on `http://localhost:8086/mcp`
 
-# Claude Code and Gemini CLI
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli
-
-# Pre-bake Claude MCP config (discord-mcp sidecar at localhost:8085)
-RUN mkdir -p /root/.claude
-COPY deploy/claude-settings.json /root/.claude/settings.json
-
-# Pre-bake Gemini MCP config (discord-mcp sidecar at localhost:8086)
-COPY deploy/gemini-settings.json /root/.gemini/settings.json
-
-# Summoner binary
-COPY --from=builder /build/summoner /usr/local/bin/summoner
-
-ENTRYPOINT ["summoner"]
-```
-
-`deploy/claude-settings.json` configures the discord MCP as an HTTP server at `http://localhost:8085/sse`. `deploy/gemini-settings.json` does the same at port 8086.
+`ANTHROPIC_API_KEY` and `GEMINI_API_KEY` are passed as env vars at runtime and inherited by spawned CLI processes automatically.
 
 ### Sidecars
 

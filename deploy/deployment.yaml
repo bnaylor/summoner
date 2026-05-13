@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: summoner
+  labels:
+    app: summoner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: summoner
+  template:
+    metadata:
+      labels:
+        app: summoner
+    spec:
+      containers:
+        - name: summoner
+          image: summoner:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: healthz
+          envFrom:
+            - secretRef:
+                name: summoner-secrets
+          env:
+            - name: NFS_MOUNT
+              value: /nfs/shared
+            - name: INACTIVITY_TIMEOUT
+              value: 20m
+          volumeMounts:
+            - name: nfs-shared
+              mountPath: /nfs/shared
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+
+        - name: discord-mcp-claude
+          image: saseq/discord-mcp:latest
+          imagePullPolicy: Always
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: summoner-secrets
+                  key: BTCLAUDE_TOKEN
+            - name: SPRING_PROFILES_ACTIVE
+              value: http
+            - name: SERVER_PORT
+              value: "8085"
+
+        - name: discord-mcp-gemini
+          image: saseq/discord-mcp:latest
+          imagePullPolicy: Always
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: summoner-secrets
+                  key: BTGEMINI_TOKEN
+            - name: SPRING_PROFILES_ACTIVE
+              value: http
+            - name: SERVER_PORT
+              value: "8086"
+
+      volumes:
+        - name: nfs-shared
+          nfs:
+            server: REPLACE_WITH_NFS_HOST
+            path: /shared
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: summoner
+spec:
+  selector:
+    app: summoner
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: healthz
+  type: ClusterIP

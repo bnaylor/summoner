@@ -190,6 +190,25 @@ All configuration via environment variables:
 
 Only models with a configured bot token are activated. A roundtable with only `BTCLAUDE_TOKEN` and `BTGEMINI_TOKEN` summons two models.
 
+### Prompt injection
+
+If `$WORK_DIR/instructions/` exists, Summoner will inject its contents into roundtable payloads at session start:
+
+| File | Injected into |
+|---|---|
+| `LEADER.md` | Leader payload, under an `## Additional Instructions` section |
+| `PARTICIPANT.md` | Every participant payload, under the same section |
+
+Files are cached in memory and reloaded automatically when their modification time changes — edit them between sessions and the next roundtable picks up the change without restarting Summoner. Both files are optional; a missing file or missing `instructions/` directory is silently ignored.
+
+**Example use:** override the artifact output directory per project:
+
+```markdown
+<!-- WORK_DIR/instructions/LEADER.md -->
+Write all design artifacts to /nfs/shared/projects/myproject/docs/ rather than
+the default ARTIFACTS_DIR. Name each file after the topic you just resolved.
+```
+
 ---
 
 ## Building

@@ -1,8 +1,8 @@
 # Summoner
 
-An always-on Discord bot that lets your agents call in frontier model CLI harnesses for task-bound design consultations — or kick off a structured multi-model roundtable.
+An always-on Discord bot for on-demand design consultations with frontier model CLI harnesses — or structured multi-model roundtables.
 
-Your lightweight always-on bots run cheap models day-to-day. When they hit a hard design decision, they summon Claude, Gemini, or Deepseek into the channel as a seasoned second opinion. The summoned agent joins the discussion, engages as a thoughtful design partner, and steps out when consensus is reached.
+Call in Claude, Gemini, or Deepseek when you hit a hard design decision. The summoned agent joins the channel, engages as a thoughtful design partner, and steps out when consensus is reached. The resulting discussion and artifacts are there for whatever else is reading the channel.
 
 For larger decisions, a **roundtable** session summons all configured models at once, with a designated leader driving the discussion and writing output artifacts when consensus is reached.
 
@@ -16,7 +16,7 @@ Three actors:
 ┌─────────────────────────────────────────────────────────┐
 │                      Discord channel                    │
 │                                                         │
-│  Hermes bot ──@Summoner claude opus design the cache──► │
+│  You ──@Summoner claude opus design the cache────────►  │
 │                         │                               │
 │               ┌─────────▼──────────┐                    │
 │               │      Summoner      │  always-on bot     │
@@ -128,7 +128,7 @@ Summons all configured models at once. One model is the **leader** — it drives
   session removed
 ```
 
-Re-spawns happen on human/Hermes turns only — not when a summoned agent posts — preventing feedback loops.
+Re-spawns happen on human turns only — not when a summoned agent posts — preventing feedback loops.
 
 ### Roundtable
 

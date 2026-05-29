@@ -103,7 +103,6 @@ func main() {
 			return
 		}
 		for _, model := range sess.Models() {
-			model := model
 			go func() {
 				if err := sp.Spawn(ctx, model.Name, model.Variant, model.Prompt); err != nil {
 					slog.Error("spawn error", "model", model.Name, "error", err)
@@ -178,10 +177,9 @@ func handleRoundtableMessage(
 				if !ok {
 					continue
 				}
-				am := model
 				go func() {
-					if err := sp.Spawn(ctx, am.Name, am.Variant, am.Prompt); err != nil {
-						slog.Error("participant spawn error", "model", am.Name, "error", err)
+					if err := sp.Spawn(ctx, model.Name, model.Variant, model.Prompt); err != nil {
+						slog.Error("participant spawn error", "model", model.Name, "error", err)
 					}
 				}()
 			}
@@ -270,7 +268,6 @@ func handleRoundtable(
 		sess.AddModel(modelName, variant, payload)
 		displayName := agentDisplayName(modelName, variant)
 		_ = client.Send(channelID, fmt.Sprintf("Summoning **%s**...", displayName))
-		modelName := modelName
 		go func() {
 			if err := sp.Spawn(ctx, modelName, variant, payload); err != nil {
 				slog.Error("roundtable spawn error", "model", modelName, "error", err)
@@ -303,7 +300,6 @@ func handleSummon(
 		}
 		_ = client.Send(channelID, fmt.Sprintf("Summoning **%s**. Stand by...", agentDisplayName(name, cmd.Variant)))
 		sess.AddModel(name, cmd.Variant, payload)
-		name := name
 		go func() {
 			if err := sp.Spawn(ctx, name, cmd.Variant, payload); err != nil {
 				slog.Error("initial spawn error", "model", name, "error", err)

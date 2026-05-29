@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -20,7 +21,13 @@ import (
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})))
+	logLevel := slog.LevelInfo
+	if s := os.Getenv("LOG_LEVEL"); s != "" {
+		if err := logLevel.UnmarshalText([]byte(s)); err != nil {
+			fmt.Fprintf(os.Stderr, "invalid LOG_LEVEL %q, using info\n", s)
+		}
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: logLevel})))
 
 	cfg := loadConfig()
 
@@ -74,11 +81,25 @@ func main() {
 			return
 		}
 
+		preview := m.Content
+		if len(preview) > 120 {
+			preview = preview[:120] + "…"
+		}
+		slog.Debug("message received",
+			"channel", m.ChannelID,
+			"author", m.Author.ID,
+			"username", m.Author.Username,
+			"is_agent", mgr.IsAgent(m.Author.ID),
+			"content_len", len(m.Content),
+			"content", preview,
+		)
+
 		channelID := m.ChannelID
 		sess := mgr.Get(channelID)
 
 		// Roundtable sessions need special dispatch.
 		if sess != nil && sess.IsRoundtable() {
+			slog.Debug("roundtable dispatch", "channel", channelID, "leader", sess.LeaderModel())
 			handleRoundtableMessage(ctx, client, mgr, sp, m, sess, modelBotIDs, cfg)
 			return
 		}
@@ -86,6 +107,7 @@ func main() {
 		// @Summoner command — only accepted from humans in non-roundtable context.
 		cmd, isSummonerCmd := trigger.Parse(m.Content, client.ID())
 		if isSummonerCmd {
+			slog.Debug("summoner command parsed", "channel", channelID, "type", cmd.Type, "model", cmd.Model, "leader", cmd.Leader)
 			switch cmd.Type {
 			case trigger.CommandSummon:
 				handleSummon(ctx, client, mgr, sp, channelID, cmd, cfg.inactivityTimeout)
@@ -100,10 +122,17 @@ func main() {
 		}
 
 		// Non-roundtable re-spawn: any non-agent message wakes all active models.
-		if sess == nil || mgr.IsAgent(m.Author.ID) {
+		if sess == nil {
+			slog.Debug("no active session, ignoring", "channel", channelID)
 			return
 		}
-		for _, model := range sess.Models() {
+		if mgr.IsAgent(m.Author.ID) {
+			slog.Debug("agent message in non-roundtable session, ignoring", "channel", channelID, "author", m.Author.ID)
+			return
+		}
+		models := sess.Models()
+		slog.Debug("re-spawning all models", "channel", channelID, "count", len(models))
+		for _, model := range models {
 			go func() {
 				if err := sp.Spawn(ctx, model.Name, model.Variant, model.Prompt); err != nil {
 					slog.Error("spawn error", "model", model.Name, "error", err)
@@ -119,8 +148,18 @@ func main() {
 		http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, "ok")
 		})
+		http.HandleFunc("/debug/sessions", func(w http.ResponseWriter, r *http.Request) {
+			sessions, agentIDs := mgr.Snapshot()
+			payload := map[string]any{
+				"summoner_id": client.ID(),
+				"agent_ids":   agentIDs,
+				"sessions":    sessions,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(payload)
+		})
 		if err := http.ListenAndServe(":8080", nil); err != nil {
-			slog.Error("healthz server error", "error", err)
+			slog.Error("http server error", "error", err)
 		}
 	}()
 

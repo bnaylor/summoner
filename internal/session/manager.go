@@ -59,3 +59,39 @@ func (m *Manager) IsAgent(userID string) bool {
 	defer m.mu.Unlock()
 	return m.agentIDs[userID]
 }
+
+// SessionSnapshot is a point-in-time view of one session for observability.
+type SessionSnapshot struct {
+	ChannelID    string   `json:"channel_id"`
+	Models       []string `json:"models"`
+	Leader       string   `json:"leader,omitempty"`
+	IsRoundtable bool     `json:"roundtable"`
+}
+
+// Snapshot returns a point-in-time view of all active sessions and registered agent IDs.
+func (m *Manager) Snapshot() (sessions []SessionSnapshot, agentIDs []string) {
+	m.mu.Lock()
+	ss := make([]*Session, 0, len(m.sessions))
+	for _, s := range m.sessions {
+		ss = append(ss, s)
+	}
+	for id := range m.agentIDs {
+		agentIDs = append(agentIDs, id)
+	}
+	m.mu.Unlock()
+
+	for _, s := range ss {
+		models := s.Models()
+		names := make([]string, len(models))
+		for i, am := range models {
+			names[i] = am.Name
+		}
+		sessions = append(sessions, SessionSnapshot{
+			ChannelID:    s.ChannelID,
+			Models:       names,
+			Leader:       s.LeaderModel(),
+			IsRoundtable: s.IsRoundtable(),
+		})
+	}
+	return
+}

@@ -19,7 +19,9 @@ func New(token string) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("discord.New: %w", err)
 	}
-	s.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages
+	// IntentMessageContent is a privileged intent required to read message
+	// content in guild channels. Without it Discord sends empty strings.
+	s.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages | discordgo.IntentMessageContent
 
 	if err := s.Open(); err != nil {
 		return nil, fmt.Errorf("discord Open: %w", err)

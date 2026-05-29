@@ -77,22 +77,23 @@ func main() {
 	defer cancel()
 
 	client.OnMessage(func(m *discordgo.MessageCreate) {
-		if m.Author.ID == client.ID() {
-			return
-		}
-
 		preview := m.Content
 		if len(preview) > 120 {
 			preview = preview[:120] + "…"
 		}
-		slog.Debug("message received",
+		isSelf := m.Author.ID == client.ID()
+		slog.Debug("message event",
 			"channel", m.ChannelID,
 			"author", m.Author.ID,
 			"username", m.Author.Username,
+			"is_self", isSelf,
 			"is_agent", mgr.IsAgent(m.Author.ID),
 			"content_len", len(m.Content),
 			"content", preview,
 		)
+		if isSelf {
+			return
+		}
 
 		channelID := m.ChannelID
 		sess := mgr.Get(channelID)

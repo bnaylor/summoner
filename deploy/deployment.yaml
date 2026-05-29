@@ -52,6 +52,11 @@ spec:
                 secretKeyRef:
                   name: summoner-secrets
                   key: BTCLAUDE_TOKEN
+            - name: DISCORD_SERVER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: summoner-secrets
+                  key: DISCORD_SERVER_ID
             - name: SPRING_PROFILES_ACTIVE
               value: http
             - name: SERVER_PORT
@@ -66,6 +71,11 @@ spec:
                 secretKeyRef:
                   name: summoner-secrets
                   key: BTGEMINI_TOKEN
+            - name: DISCORD_SERVER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: summoner-secrets
+                  key: DISCORD_SERVER_ID
             - name: SPRING_PROFILES_ACTIVE
               value: http
             - name: SERVER_PORT
@@ -80,6 +90,11 @@ spec:
                 secretKeyRef:
                   name: summoner-secrets
                   key: BTDEEPSEEK_TOKEN
+            - name: DISCORD_SERVER_ID
+              valueFrom:
+                secretKeyRef:
+                  name: summoner-secrets
+                  key: DISCORD_SERVER_ID
             - name: SPRING_PROFILES_ACTIVE
               value: http
             - name: SERVER_PORT

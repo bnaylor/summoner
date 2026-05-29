@@ -245,6 +245,7 @@ Create the secret:
 ```bash
 kubectl create secret generic summoner-secrets \
   --from-literal=SUMMONER_TOKEN=<summoner-bot-token> \
+  --from-literal=DISCORD_SERVER_ID=<guild-id> \
   --from-literal=BTCLAUDE_TOKEN=<btclaude-token> \
   --from-literal=BTGEMINI_TOKEN=<btgemini-token> \
   --from-literal=BTDEEPSEEK_TOKEN=<btdeepseek-token> \

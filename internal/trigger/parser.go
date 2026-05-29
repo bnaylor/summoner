@@ -8,17 +8,25 @@ import (
 type CommandType int
 
 const (
-	CommandUnknown CommandType = iota // mention present but unrecognized token
-	CommandSummon                     // request to summon a model
-	CommandDismiss                    // request to end the active session
+	CommandUnknown    CommandType = iota // mention present but unrecognized token
+	CommandSummon                        // request to summon a model
+	CommandDismiss                       // request to end the active session
+	CommandRoundtable                    // start a structured multi-model design session
 )
 
 // Command is the result of parsing a Discord message that mentions the Summoner bot.
 type Command struct {
 	Type    CommandType
-	Model   string // "claude", "gemini", "both"
+	Model   string // "claude", "gemini", "deepseek", "both" — for CommandSummon
+	Leader  string // "claude", "gemini", "deepseek", or "" (use default) — for CommandRoundtable
 	Variant string // "opus", "sonnet", "haiku", "pro", "flash", or ""
 	Prompt  string
+}
+
+var knownModels = map[string]bool{
+	"claude":   true,
+	"gemini":   true,
+	"deepseek": true,
 }
 
 var claudeVariants = map[string]bool{"opus": true, "sonnet": true, "haiku": true}
@@ -49,34 +57,64 @@ func Parse(content, summonerID string) (Command, bool) {
 
 	first := strings.ToLower(tokens[0])
 
-	if first == "dismiss" {
+	switch first {
+	case "dismiss":
 		return Command{Type: CommandDismiss}, true
-	}
-
-	if first != "claude" && first != "gemini" && first != "both" {
+	case "roundtable":
+		return parseRoundtable(tokens[1:]), true
+	case "claude", "gemini", "deepseek", "both":
+		return parseSummon(first, tokens[1:]), true
+	default:
 		return Command{Type: CommandUnknown}, true
 	}
+}
 
-	cmd := Command{Type: CommandSummon, Model: first}
-	rest := tokens[1:]
+func parseRoundtable(tokens []string) Command {
+	cmd := Command{Type: CommandRoundtable}
+	if len(tokens) == 0 {
+		return cmd
+	}
 
-	if len(rest) > 0 {
-		second := strings.ToLower(rest[0])
-		isVariant := false
-		switch first {
-		case "claude":
-			isVariant = claudeVariants[second]
-		case "gemini":
-			isVariant = geminiVariants[second]
-		case "both":
-			isVariant = claudeVariants[second] || geminiVariants[second]
-		}
-		if isVariant {
+	first := strings.ToLower(tokens[0])
+	if knownModels[first] {
+		cmd.Leader = first
+		tokens = tokens[1:]
+	}
+
+	if len(tokens) > 0 && cmd.Leader != "" {
+		second := strings.ToLower(tokens[0])
+		if isVariantFor(cmd.Leader, second) {
 			cmd.Variant = second
-			rest = rest[1:]
+			tokens = tokens[1:]
 		}
 	}
 
-	cmd.Prompt = strings.Join(rest, " ")
-	return cmd, true
+	cmd.Prompt = strings.Join(tokens, " ")
+	return cmd
+}
+
+func parseSummon(model string, tokens []string) Command {
+	cmd := Command{Type: CommandSummon, Model: model}
+	if len(tokens) > 0 {
+		second := strings.ToLower(tokens[0])
+		if isVariantFor(model, second) {
+			cmd.Variant = second
+			tokens = tokens[1:]
+		}
+	}
+	cmd.Prompt = strings.Join(tokens, " ")
+	return cmd
+}
+
+func isVariantFor(model, token string) bool {
+	switch model {
+	case "claude":
+		return claudeVariants[token]
+	case "gemini":
+		return geminiVariants[token]
+	case "both":
+		return claudeVariants[token] || geminiVariants[token]
+	}
+	// deepseek has no defined variants
+	return false
 }

@@ -25,14 +25,17 @@ spec:
             - secretRef:
                 name: summoner-secrets
           env:
-            - name: NFS_MOUNT
+            - name: WORK_DIR
               value: /nfs/shared
+            - name: ARTIFACTS_DIR
+              value: /nfs/shared/roundtable
             - name: INACTIVITY_TIMEOUT
               value: 20m
+            - name: ROUNDTABLE_LEADER
+              value: claude
           volumeMounts:
             - name: nfs-shared
               mountPath: /nfs/shared
-              readOnly: true
           livenessProbe:
             httpGet:
               path: /healthz
@@ -68,12 +71,25 @@ spec:
             - name: SERVER_PORT
               value: "8086"
 
+        - name: discord-mcp-deepseek
+          image: saseq/discord-mcp:latest
+          imagePullPolicy: Always
+          env:
+            - name: DISCORD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: summoner-secrets
+                  key: BTDEEPSEEK_TOKEN
+            - name: SPRING_PROFILES_ACTIVE
+              value: http
+            - name: SERVER_PORT
+              value: "8087"
+
       volumes:
         - name: nfs-shared
           nfs:
             server: REPLACE_WITH_NFS_HOST
             path: /shared
-            readOnly: true
 ---
 apiVersion: v1
 kind: Service

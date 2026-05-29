@@ -103,3 +103,86 @@ func TestParse_MentionWithBang(t *testing.T) {
 		t.Fatalf("expected claude, got %q", cmd.Model)
 	}
 }
+
+func TestParse_RoundtableClaudeLeader(t *testing.T) {
+	cmd, ok := trigger.Parse("<@123456> roundtable claude design the auth system", "123456")
+	if !ok {
+		t.Fatal("expected command")
+	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
+	if cmd.Leader != "claude" {
+		t.Fatalf("expected leader claude, got %q", cmd.Leader)
+	}
+	if cmd.Prompt != "design the auth system" {
+		t.Fatalf("unexpected prompt: %q", cmd.Prompt)
+	}
+}
+
+func TestParse_RoundtableGeminiProLeader(t *testing.T) {
+	cmd, ok := trigger.Parse("<@123456> roundtable gemini pro design the cache", "123456")
+	if !ok {
+		t.Fatal("expected command")
+	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
+	if cmd.Leader != "gemini" {
+		t.Fatalf("expected leader gemini, got %q", cmd.Leader)
+	}
+	if cmd.Variant != "pro" {
+		t.Fatalf("expected variant pro, got %q", cmd.Variant)
+	}
+	if cmd.Prompt != "design the cache" {
+		t.Fatalf("unexpected prompt: %q", cmd.Prompt)
+	}
+}
+
+func TestParse_RoundtableDeepseekLeader(t *testing.T) {
+	cmd, ok := trigger.Parse("<@123456> roundtable deepseek tradeoffs on storage backends", "123456")
+	if !ok {
+		t.Fatal("expected command")
+	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
+	if cmd.Leader != "deepseek" {
+		t.Fatalf("expected leader deepseek, got %q", cmd.Leader)
+	}
+	if cmd.Prompt != "tradeoffs on storage backends" {
+		t.Fatalf("unexpected prompt: %q", cmd.Prompt)
+	}
+}
+
+func TestParse_RoundtableDefaultLeader(t *testing.T) {
+	cmd, ok := trigger.Parse("<@123456> roundtable design the auth system", "123456")
+	if !ok {
+		t.Fatal("expected command")
+	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
+	if cmd.Leader != "" {
+		t.Fatalf("expected empty leader (use default), got %q", cmd.Leader)
+	}
+	if cmd.Prompt != "design the auth system" {
+		t.Fatalf("unexpected prompt: %q", cmd.Prompt)
+	}
+}
+
+func TestParse_RoundtableNoArgs(t *testing.T) {
+	cmd, ok := trigger.Parse("<@123456> roundtable", "123456")
+	if !ok {
+		t.Fatal("expected command")
+	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
+	if cmd.Leader != "" {
+		t.Fatalf("expected empty leader, got %q", cmd.Leader)
+	}
+	if cmd.Prompt != "" {
+		t.Fatalf("expected empty prompt, got %q", cmd.Prompt)
+	}
+}

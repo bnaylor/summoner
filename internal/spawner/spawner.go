@@ -12,7 +12,7 @@ import (
 // Config holds spawn configuration loaded from environment at startup.
 type Config struct {
 	ClaudeCmd            string // CLI binary name, default "claude"
-	GeminiCmd            string // CLI binary name, default "gemini"
+	GeminiCmd            string // CLI binary name, default "agy"
 	DeepseekCmd          string // CLI binary name, default "claude-ds"
 	WorkDir              string // working directory for spawned CLIs
 	ClaudeDefaultModel   string // --model value when no variant specified; empty = CLI default
@@ -42,7 +42,7 @@ func New(cfg Config) *Spawner {
 		cfg.ClaudeCmd = "claude"
 	}
 	if cfg.GeminiCmd == "" {
-		cfg.GeminiCmd = "gemini"
+		cfg.GeminiCmd = "agy"
 	}
 	if cfg.DeepseekCmd == "" {
 		cfg.DeepseekCmd = "claude-ds"

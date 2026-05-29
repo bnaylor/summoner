@@ -20,7 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # CLI tools — intentionally unpinned, rebuild weekly to stay current
-RUN npm install -g @anthropic-ai/claude-code @google/gemini-cli
+# gemini-cli is deprecated; antigravity-cli (agy) is its successor and uses
+# the same ~/.gemini/ config path.
+RUN npm install -g @anthropic-ai/claude-code
+RUN curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir /usr/local/bin
 
 # claude-ds: wrapper that routes claude-code at the DeepSeek Anthropic-compatible API.
 # Download the script itself; skip the interactive installer.

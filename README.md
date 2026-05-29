@@ -198,7 +198,7 @@ Only models with a configured bot token are activated. A roundtable with only `B
 docker build -t summoner:latest .
 ```
 
-The image is intentionally rebuilt frequently — `claude-code` and `gemini-cli` are installed unpinned so a weekly rebuild picks up CLI updates automatically.
+The image is intentionally rebuilt frequently — `claude-code` and `agy` are installed unpinned so a weekly rebuild picks up CLI updates automatically.
 
 ---
 

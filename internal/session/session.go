@@ -15,12 +15,11 @@ type ActiveModel struct {
 
 // Session tracks a single active consulting session in one Discord channel.
 type Session struct {
-	ChannelID    string
-	mu           sync.Mutex
-	models       map[string]*ActiveModel
-	timer        *time.Timer
-	leaderModel  string
-	isRoundtable bool
+	ChannelID   string
+	mu          sync.Mutex
+	models      map[string]*ActiveModel
+	timer       *time.Timer
+	leaderModel string
 }
 
 // NewSession creates a new Session for the given Discord channel ID.
@@ -73,15 +72,17 @@ func (s *Session) Models() []ActiveModel {
 func (s *Session) SetLeader(model string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if _, ok := s.models[model]; !ok {
+		panic("session.SetLeader: model not registered: " + model)
+	}
 	s.leaderModel = model
-	s.isRoundtable = true
 }
 
 // IsRoundtable reports whether this is a structured roundtable session.
 func (s *Session) IsRoundtable() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.isRoundtable
+	return s.leaderModel != ""
 }
 
 // LeaderModel returns the name of the leader model, or "" for non-roundtable sessions.

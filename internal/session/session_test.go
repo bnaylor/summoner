@@ -85,6 +85,9 @@ func TestSession_SetLeaderIsRoundtable(t *testing.T) {
 	if s.IsRoundtable() {
 		t.Fatal("should not be roundtable before SetLeader")
 	}
+	if s.LeaderModel() != "" {
+		t.Fatalf("expected empty leader before SetLeader, got %q", s.LeaderModel())
+	}
 	s.AddModel("claude", "opus", "payload-for-claude")
 	s.AddModel("gemini", "", "payload-for-gemini")
 	s.SetLeader("claude")
@@ -105,6 +108,16 @@ func TestSession_ParticipantNamesExcludesLeader(t *testing.T) {
 	names := s.ParticipantNames()
 	if len(names) != 2 {
 		t.Fatalf("expected 2 participants, got %d", len(names))
+	}
+	found := map[string]bool{}
+	for _, n := range names {
+		found[n] = true
+	}
+	if !found["gemini"] {
+		t.Fatal("expected gemini in participants")
+	}
+	if !found["deepseek"] {
+		t.Fatal("expected deepseek in participants")
 	}
 	for _, n := range names {
 		if n == "claude" {

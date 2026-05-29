@@ -9,23 +9,23 @@ import (
 	"strings"
 )
 
-// Config holds spawn configuration loaded from environment variables at startup.
+// Config holds spawn configuration loaded from environment at startup.
 type Config struct {
-	ClaudeCmd          string // CLI command name, default "claude"
-	GeminiCmd          string // CLI command name, default "gemini"
-	NFSMount           string // working directory for spawned CLIs
-	ClaudeDefaultModel string // --model value when no variant specified; empty = CLI default
-	GeminiDefaultModel string // --model value when no variant specified; empty = CLI default
+	ClaudeCmd            string // CLI binary name, default "claude"
+	GeminiCmd            string // CLI binary name, default "gemini"
+	DeepseekCmd          string // CLI binary name, default "claude-ds"
+	WorkDir              string // working directory for spawned CLIs
+	ClaudeDefaultModel   string // --model value when no variant specified; empty = CLI default
+	GeminiDefaultModel   string // --model value when no variant specified; empty = CLI default
+	DeepseekDefaultModel string // --model value when no variant specified; empty = CLI default
 }
 
-// claudeModels maps variant shortnames to Anthropic model IDs.
 var claudeModels = map[string]string{
 	"opus":   "claude-opus-4-7",
 	"sonnet": "claude-sonnet-4-6",
 	"haiku":  "claude-haiku-4-5-20251001",
 }
 
-// geminiModels maps variant shortnames to Gemini model IDs.
 var geminiModels = map[string]string{
 	"pro":   "gemini-2.5-pro",
 	"flash": "gemini-2.5-flash",
@@ -36,8 +36,7 @@ type Spawner struct {
 	cfg Config
 }
 
-// New creates a Spawner with the given configuration.
-// Default CLI command names are applied if not set.
+// New creates a Spawner. Default CLI command names are applied if not set.
 func New(cfg Config) *Spawner {
 	if cfg.ClaudeCmd == "" {
 		cfg.ClaudeCmd = "claude"
@@ -45,14 +44,16 @@ func New(cfg Config) *Spawner {
 	if cfg.GeminiCmd == "" {
 		cfg.GeminiCmd = "gemini"
 	}
+	if cfg.DeepseekCmd == "" {
+		cfg.DeepseekCmd = "claude-ds"
+	}
 	return &Spawner{cfg: cfg}
 }
 
 // Spawn runs the CLI for the given model and blocks until it exits.
-// Intended to be called in a goroutine.
-// name is "claude" or "gemini"; variant is e.g. "opus" or "" for the CLI default.
-func (s *Spawner) Spawn(ctx context.Context, name, variant, prompt string) error {
-	cmd, modelID := s.buildCmd(ctx, name, variant, prompt)
+// Call in a goroutine. payload is the fully-formatted -p argument.
+func (s *Spawner) Spawn(ctx context.Context, name, variant, payload string) error {
+	cmd, modelID := s.buildCmd(ctx, name, variant, payload)
 	if cmd == nil {
 		return fmt.Errorf("unknown model: %q", name)
 	}
@@ -73,9 +74,7 @@ func (s *Spawner) Spawn(ctx context.Context, name, variant, prompt string) error
 	return nil
 }
 
-func (s *Spawner) buildCmd(ctx context.Context, name, variant, prompt string) (*exec.Cmd, string) {
-	payload := FormatPayload(prompt)
-
+func (s *Spawner) buildCmd(ctx context.Context, name, variant, payload string) (*exec.Cmd, string) {
 	switch name {
 	case "claude":
 		modelID := resolveModel(variant, claudeModels, s.cfg.ClaudeDefaultModel)
@@ -84,8 +83,8 @@ func (s *Spawner) buildCmd(ctx context.Context, name, variant, prompt string) (*
 			args = append([]string{"--model", modelID}, args...)
 		}
 		cmd := exec.CommandContext(ctx, s.cfg.ClaudeCmd, args...)
-		cmd.Dir = s.cfg.NFSMount
-		cmd.Env = os.Environ() // inherits ANTHROPIC_API_KEY
+		cmd.Dir = s.cfg.WorkDir
+		cmd.Env = os.Environ()
 		return cmd, modelID
 
 	case "gemini":
@@ -95,8 +94,19 @@ func (s *Spawner) buildCmd(ctx context.Context, name, variant, prompt string) (*
 			args = append([]string{"--model", modelID}, args...)
 		}
 		cmd := exec.CommandContext(ctx, s.cfg.GeminiCmd, args...)
-		cmd.Dir = s.cfg.NFSMount
-		cmd.Env = os.Environ() // inherits GEMINI_API_KEY
+		cmd.Dir = s.cfg.WorkDir
+		cmd.Env = os.Environ()
+		return cmd, modelID
+
+	case "deepseek":
+		modelID := s.cfg.DeepseekDefaultModel
+		args := []string{"-p", payload}
+		if modelID != "" {
+			args = append([]string{"--model", modelID}, args...)
+		}
+		cmd := exec.CommandContext(ctx, s.cfg.DeepseekCmd, args...)
+		cmd.Dir = s.cfg.WorkDir
+		cmd.Env = os.Environ()
 		return cmd, modelID
 	}
 

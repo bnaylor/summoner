@@ -23,6 +23,14 @@ func New(token string) (*Client, error) {
 	// content in guild channels. Without it Discord sends empty strings.
 	s.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages | discordgo.IntentMessageContent
 
+	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
+		guilds := make([]string, len(r.Guilds))
+		for i, g := range r.Guilds {
+			guilds[i] = g.ID
+		}
+		slog.Info("discord ready", "bot_id", r.User.ID, "username", r.User.Username, "guilds", guilds)
+	})
+
 	if err := s.Open(); err != nil {
 		return nil, fmt.Errorf("discord Open: %w", err)
 	}

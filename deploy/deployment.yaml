@@ -25,12 +25,6 @@ spec:
             - secretRef:
                 name: summoner-secrets
           env:
-            - name: SUMMONER_ROLE_ID
-              valueFrom:
-                secretKeyRef:
-                  name: summoner-secrets
-                  key: SUMMONER_ROLE_ID
-                  optional: true
             - name: WORK_DIR
               value: /nfs/shared
             - name: ARTIFACTS_DIR

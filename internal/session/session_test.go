@@ -79,3 +79,52 @@ func TestSession_StopTimer(t *testing.T) {
 		t.Fatal("timer fired after stop")
 	}
 }
+
+func TestSession_SetLeaderIsRoundtable(t *testing.T) {
+	s := session.NewSession("chan1")
+	if s.IsRoundtable() {
+		t.Fatal("should not be roundtable before SetLeader")
+	}
+	s.AddModel("claude", "opus", "payload-for-claude")
+	s.AddModel("gemini", "", "payload-for-gemini")
+	s.SetLeader("claude")
+	if !s.IsRoundtable() {
+		t.Fatal("should be roundtable after SetLeader")
+	}
+	if s.LeaderModel() != "claude" {
+		t.Fatalf("expected leader claude, got %q", s.LeaderModel())
+	}
+}
+
+func TestSession_ParticipantNamesExcludesLeader(t *testing.T) {
+	s := session.NewSession("chan1")
+	s.AddModel("claude", "opus", "payload-claude")
+	s.AddModel("gemini", "", "payload-gemini")
+	s.AddModel("deepseek", "", "payload-deepseek")
+	s.SetLeader("claude")
+	names := s.ParticipantNames()
+	if len(names) != 2 {
+		t.Fatalf("expected 2 participants, got %d", len(names))
+	}
+	for _, n := range names {
+		if n == "claude" {
+			t.Fatal("leader should not appear in ParticipantNames")
+		}
+	}
+}
+
+func TestSession_ModelLookup(t *testing.T) {
+	s := session.NewSession("chan1")
+	s.AddModel("claude", "opus", "the-payload")
+	m, ok := s.Model("claude")
+	if !ok {
+		t.Fatal("expected to find claude")
+	}
+	if m.Prompt != "the-payload" {
+		t.Fatalf("unexpected prompt: %q", m.Prompt)
+	}
+	_, ok = s.Model("gemini")
+	if ok {
+		t.Fatal("should not find gemini (not added)")
+	}
+}

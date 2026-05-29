@@ -6,18 +6,21 @@ import (
 )
 
 // ActiveModel holds the details needed to re-spawn a summoned CLI process.
+// Prompt stores the fully-formatted -p payload (not the raw user input).
 type ActiveModel struct {
-	Name    string // "claude" or "gemini"
-	Variant string // "opus", "pro", etc. or "" for CLI default
-	Prompt  string // initial summon prompt, unchanged across re-spawns
+	Name    string
+	Variant string
+	Prompt  string // fully-formatted CLI payload, reused on every re-spawn
 }
 
 // Session tracks a single active consulting session in one Discord channel.
 type Session struct {
-	ChannelID string // Discord channel ID this session belongs to
-	mu        sync.Mutex
-	models    map[string]*ActiveModel
-	timer     *time.Timer
+	ChannelID    string
+	mu           sync.Mutex
+	models       map[string]*ActiveModel
+	timer        *time.Timer
+	leaderModel  string
+	isRoundtable bool
 }
 
 // NewSession creates a new Session for the given Discord channel ID.
@@ -28,8 +31,7 @@ func NewSession(channelID string) *Session {
 	}
 }
 
-// AddModel registers a model as active in this session.
-// If the model is already active, its variant is updated.
+// AddModel registers a model as active. If already present, updates variant and prompt.
 func (s *Session) AddModel(name, variant, prompt string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -44,6 +46,17 @@ func (s *Session) HasModel(name string) bool {
 	return ok
 }
 
+// Model returns the ActiveModel for the given name, if present.
+func (s *Session) Model(name string) (ActiveModel, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	m, ok := s.models[name]
+	if !ok {
+		return ActiveModel{}, false
+	}
+	return *m, true
+}
+
 // Models returns a snapshot of all active models.
 func (s *Session) Models() []ActiveModel {
 	s.mu.Lock()
@@ -55,8 +68,43 @@ func (s *Session) Models() []ActiveModel {
 	return out
 }
 
-// ResetTimer starts or restarts the inactivity timer.
-// fn is called when the timer fires (in its own goroutine).
+// SetLeader marks this session as a roundtable and designates the named model as leader.
+// The model must already have been added via AddModel.
+func (s *Session) SetLeader(model string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.leaderModel = model
+	s.isRoundtable = true
+}
+
+// IsRoundtable reports whether this is a structured roundtable session.
+func (s *Session) IsRoundtable() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.isRoundtable
+}
+
+// LeaderModel returns the name of the leader model, or "" for non-roundtable sessions.
+func (s *Session) LeaderModel() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.leaderModel
+}
+
+// ParticipantNames returns the names of all active models that are not the leader.
+func (s *Session) ParticipantNames() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var out []string
+	for name := range s.models {
+		if name != s.leaderModel {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+// ResetTimer starts or restarts the inactivity timer. fn is called when it fires.
 func (s *Session) ResetTimer(d time.Duration, fn func()) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -66,7 +114,7 @@ func (s *Session) ResetTimer(d time.Duration, fn func()) {
 	s.timer = time.AfterFunc(d, fn)
 }
 
-// StopTimer cancels the inactivity timer if one is running.
+// StopTimer cancels the inactivity timer.
 func (s *Session) StopTimer() {
 	s.mu.Lock()
 	defer s.mu.Unlock()

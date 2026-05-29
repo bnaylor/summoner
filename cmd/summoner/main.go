@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -251,8 +252,9 @@ func handleRoundtable(
 	}
 
 	leaderDisplayName := agentDisplayName(leaderModel, cmd.Variant)
-	leaderPayload := spawner.FormatLeaderPayload(cmd.Prompt, cfg.artifactsDir, participantDisplayNames)
-	participantPayload := spawner.FormatParticipantPayload(cmd.Prompt, leaderDisplayName)
+	instructionsDir := filepath.Join(cfg.workDir, "instructions")
+	leaderPayload := spawner.FormatLeaderPayload(cmd.Prompt, cfg.artifactsDir, participantDisplayNames, instructionsDir)
+	participantPayload := spawner.FormatParticipantPayload(cmd.Prompt, leaderDisplayName, instructionsDir)
 
 	_ = client.Send(channelID, fmt.Sprintf("Starting roundtable. **%s** is leading. Summoning participants...", leaderDisplayName))
 

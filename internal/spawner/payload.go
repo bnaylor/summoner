@@ -2,7 +2,11 @@ package spawner
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 )
 
 const participantTemplate = `You are being summoned as a seasoned architect to join an ongoing technical
@@ -53,14 +57,20 @@ func FormatPayload(initialPrompt string) string {
 // FormatLeaderPayload returns the -p payload for the roundtable leader.
 // participants is the list of display names (e.g. "BTGemini", "BTDeepseek").
 // artifactsDir is the filesystem path where the leader should write output docs.
-func FormatLeaderPayload(topic, artifactsDir string, participants []string) string {
+// instructionsDir is the path to check for a LEADER.md override file; empty disables injection.
+func FormatLeaderPayload(topic, artifactsDir string, participants []string, instructionsDir string) string {
 	participantList := "  - " + strings.Join(participants, "\n  - ")
-	return fmt.Sprintf(leaderTemplate, topic, participantList, artifactsDir)
+	base := fmt.Sprintf(leaderTemplate, topic, participantList, artifactsDir)
+	if extra := readInstruction(instructionsDir, "LEADER.md"); extra != "" {
+		base += "\n\n## Additional Instructions\n\n" + extra
+	}
+	return base
 }
 
 // FormatParticipantPayload returns the -p payload for a roundtable participant.
 // leaderDisplayName is the Discord display name of the leader (e.g. "BTClaude").
-func FormatParticipantPayload(topic, leaderDisplayName string) string {
+// instructionsDir is the path to check for a PARTICIPANT.md override file; empty disables injection.
+func FormatParticipantPayload(topic, leaderDisplayName, instructionsDir string) string {
 	const tmpl = `You are a participant in a multi-model design roundtable on Discord.
 
 Topic: %s
@@ -75,5 +85,55 @@ Topic: %s
 
 Each time you are spawned, read the channel history to understand the current
 state of the discussion, then respond to whatever the leader asked you.`
-	return fmt.Sprintf(tmpl, topic, leaderDisplayName)
+	base := fmt.Sprintf(tmpl, topic, leaderDisplayName)
+	if extra := readInstruction(instructionsDir, "PARTICIPANT.md"); extra != "" {
+		base += "\n\n## Additional Instructions\n\n" + extra
+	}
+	return base
+}
+
+// instruction cache — mtime-keyed so stale files are reloaded automatically.
+type cachedFile struct {
+	content string
+	modTime time.Time
+}
+
+var (
+	fileCacheMu sync.Mutex
+	fileCache   = map[string]cachedFile{}
+)
+
+// readInstruction returns the contents of name inside dir, or "" if the file
+// does not exist or cannot be read. Results are cached by path and reloaded
+// whenever the file's modification time changes.
+func readInstruction(dir, name string) string {
+	if dir == "" {
+		return ""
+	}
+	path := filepath.Join(dir, name)
+
+	info, err := os.Stat(path)
+	if err != nil {
+		return ""
+	}
+
+	fileCacheMu.Lock()
+	cached, hit := fileCache[path]
+	fileCacheMu.Unlock()
+
+	if hit && !info.ModTime().After(cached.modTime) {
+		return cached.content
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+
+	entry := cachedFile{content: string(data), modTime: info.ModTime()}
+	fileCacheMu.Lock()
+	fileCache[path] = entry
+	fileCacheMu.Unlock()
+
+	return entry.content
 }

@@ -14,21 +14,21 @@ Three actors:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      Discord channel                     │
+│                      Discord channel                    │
 │                                                         │
 │  Hermes bot ──@Summoner claude opus design the cache──► │
 │                         │                               │
-│               ┌─────────▼──────────┐                   │
+│               ┌─────────▼──────────┐                    │
 │               │      Summoner      │  always-on bot     │
 │               │  (orchestrator)    │  parses @mentions  │
 │               └─────────┬──────────┘  manages sessions  │
 │                         │                               │
-│               ┌─────────▼──────────┐                   │
+│               ┌─────────▼──────────┐                    │
 │               │  claude -p "..."   │  ephemeral CLI     │
 │               │   (BTClaude)       │  posts directly    │
-│               └─────────┬──────────┘  via discord-mcp  │
+│               └─────────┬──────────┘  via discord-mcp   │
 │                         │                               │
-│  BTClaude ◄─────────────┘  reads channel history,      │
+│  BTClaude ◄─────────────┘  reads channel history,       │
 │            posts response  asks questions, surfaces     │
 │                            tradeoffs                    │
 └─────────────────────────────────────────────────────────┘
@@ -207,16 +207,16 @@ The image is intentionally rebuilt frequently — `claude-code` and `agy` are in
 Four containers in one pod:
 
 ```
-┌──────────────────────────────── k8s Pod ───────────────────────────────┐
-│                                                                         │
+┌──────────────────────────────── k8s Pod ──────────────────────────────┐
+│                                                                       │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌───────────┐  │
 │  │   summoner   │  │ discord-mcp  │  │ discord-mcp  │  │discord-mcp│  │
 │  │  (Go binary) │  │   claude     │  │   gemini     │  │ deepseek  │  │
 │  │              │  │   :8085      │  │   :8086      │  │  :8087    │  │
 │  └──────┬───────┘  └──────────────┘  └──────────────┘  └───────────┘  │
-│         │                                                               │
-│  /nfs/shared (NFS mount — WORK_DIR + ARTIFACTS_DIR)                    │
-└─────────────────────────────────────────────────────────────────────────┘
+│         │                                                             │
+│  /nfs/shared (NFS mount — WORK_DIR + ARTIFACTS_DIR)                   │
+└───────────────────────────────────────────────────────────────────────┘
 ```
 
 The discord-mcp sidecars ([SaseQ/discord-mcp](https://github.com/SaseQ/discord-mcp)) run in HTTP mode. The pre-baked MCP configs in `deploy/` point each CLI at its sidecar over localhost.

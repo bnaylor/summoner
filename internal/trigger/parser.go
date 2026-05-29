@@ -4,15 +4,17 @@ import (
 	"strings"
 )
 
+// CommandType identifies the kind of command parsed from a Discord mention.
 type CommandType int
 
 const (
-	CommandUnknown    CommandType = iota
-	CommandSummon
-	CommandDismiss
-	CommandRoundtable
+	CommandUnknown    CommandType = iota // mention present but unrecognized token
+	CommandSummon                        // request to summon a model
+	CommandDismiss                       // request to end the active session
+	CommandRoundtable                    // start a structured multi-model design session
 )
 
+// Command is the result of parsing a Discord message that mentions the Summoner bot.
 type Command struct {
 	Type    CommandType
 	Model   string // "claude", "gemini", "deepseek", "both" — for CommandSummon
@@ -30,6 +32,9 @@ var knownModels = map[string]bool{
 var claudeVariants = map[string]bool{"opus": true, "sonnet": true, "haiku": true}
 var geminiVariants = map[string]bool{"pro": true, "flash": true}
 
+// Parse extracts a Command from a Discord message content string.
+// summonerID is the Discord user ID of the Summoner bot.
+// Returns (Command{}, false) if the Summoner bot is not mentioned.
 func Parse(content, summonerID string) (Command, bool) {
 	mention := "<@" + summonerID + ">"
 	mentionBang := "<@!" + summonerID + ">"
@@ -110,5 +115,6 @@ func isVariantFor(model, token string) bool {
 	case "both":
 		return claudeVariants[token] || geminiVariants[token]
 	}
+	// deepseek has no defined variants
 	return false
 }

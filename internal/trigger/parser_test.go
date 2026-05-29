@@ -144,6 +144,9 @@ func TestParse_RoundtableDeepseekLeader(t *testing.T) {
 	if !ok {
 		t.Fatal("expected command")
 	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
 	if cmd.Leader != "deepseek" {
 		t.Fatalf("expected leader deepseek, got %q", cmd.Leader)
 	}
@@ -165,5 +168,21 @@ func TestParse_RoundtableDefaultLeader(t *testing.T) {
 	}
 	if cmd.Prompt != "design the auth system" {
 		t.Fatalf("unexpected prompt: %q", cmd.Prompt)
+	}
+}
+
+func TestParse_RoundtableNoArgs(t *testing.T) {
+	cmd, ok := trigger.Parse("<@123456> roundtable", "123456")
+	if !ok {
+		t.Fatal("expected command")
+	}
+	if cmd.Type != trigger.CommandRoundtable {
+		t.Fatalf("expected roundtable, got %v", cmd.Type)
+	}
+	if cmd.Leader != "" {
+		t.Fatalf("expected empty leader, got %q", cmd.Leader)
+	}
+	if cmd.Prompt != "" {
+		t.Fatalf("expected empty prompt, got %q", cmd.Prompt)
 	}
 }

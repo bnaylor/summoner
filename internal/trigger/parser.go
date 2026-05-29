@@ -34,20 +34,27 @@ var geminiVariants = map[string]bool{"pro": true, "flash": true}
 
 // Parse extracts a Command from a Discord message content string.
 // summonerID is the Discord user ID of the Summoner bot.
+// roleID is an optional Discord role ID that also triggers the bot (e.g. a
+// @Summoner role); pass "" to disable role mention matching.
 // Returns (Command{}, false) if the Summoner bot is not mentioned.
-func Parse(content, summonerID string) (Command, bool) {
+func Parse(content, summonerID, roleID string) (Command, bool) {
 	mention := "<@" + summonerID + ">"
 	mentionBang := "<@!" + summonerID + ">"
+	roleMention := "<@&" + roleID + ">"
 
-	idx := strings.Index(content, mention)
-	if idx == -1 {
-		idx = strings.Index(content, mentionBang)
-		if idx == -1 {
-			return Command{}, false
+	found := false
+	for _, m := range []string{mention, mentionBang, roleMention} {
+		if m == "<@&>" {
+			continue // roleID was empty
 		}
-		content = strings.Replace(content, mentionBang, "", 1)
-	} else {
-		content = strings.Replace(content, mention, "", 1)
+		if strings.Contains(content, m) {
+			content = strings.Replace(content, m, "", 1)
+			found = true
+			break
+		}
+	}
+	if !found {
+		return Command{}, false
 	}
 
 	tokens := strings.Fields(content)

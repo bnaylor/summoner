@@ -173,6 +173,7 @@ All configuration via environment variables:
 | Variable | Purpose | Default |
 |---|---|---|
 | `SUMMONER_TOKEN` | Summoner bot's Discord token | required |
+| `SUMMONER_ROLE_ID` | Discord role ID that also triggers the bot (the `@Summoner` role) | optional |
 | `BTCLAUDE_TOKEN` | BTClaude Discord token (discord-mcp sidecar) | optional |
 | `BTGEMINI_TOKEN` | BTGemini Discord token (discord-mcp sidecar) | optional |
 | `BTDEEPSEEK_TOKEN` | BTDeepseek Discord token (discord-mcp sidecar) | optional |

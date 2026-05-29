@@ -106,7 +106,7 @@ func main() {
 		}
 
 		// @Summoner command — only accepted from humans in non-roundtable context.
-		cmd, isSummonerCmd := trigger.Parse(m.Content, client.ID())
+		cmd, isSummonerCmd := trigger.Parse(m.Content, client.ID(), cfg.summonerRoleID)
 		if isSummonerCmd {
 			slog.Debug("summoner command parsed", "channel", channelID, "type", cmd.Type, "model", cmd.Model, "leader", cmd.Leader)
 			switch cmd.Type {
@@ -196,7 +196,7 @@ func handleRoundtableMessage(
 
 	if m.Author.ID == leaderBotID {
 		// Leader is on the @Summoner command allowlist.
-		if cmd, ok := trigger.Parse(m.Content, client.ID()); ok {
+		if cmd, ok := trigger.Parse(m.Content, client.ID(), cfg.summonerRoleID); ok {
 			switch cmd.Type {
 			case trigger.CommandSummon:
 				handleSummon(ctx, client, mgr, sp, channelID, cmd, cfg.inactivityTimeout)
@@ -397,6 +397,7 @@ func agentDisplayName(model, variant string) string {
 
 type config struct {
 	summonerToken        string
+	summonerRoleID       string
 	btClaudeToken        string
 	btGeminiToken        string
 	btDeepseekToken      string
@@ -419,6 +420,7 @@ func loadConfig() config {
 	workDir := envOr("WORK_DIR", envOr("NFS_MOUNT", "."))
 	return config{
 		summonerToken:        requireEnv("SUMMONER_TOKEN"),
+		summonerRoleID:       os.Getenv("SUMMONER_ROLE_ID"),
 		btClaudeToken:        os.Getenv("BTCLAUDE_TOKEN"),
 		btGeminiToken:        os.Getenv("BTGEMINI_TOKEN"),
 		btDeepseekToken:      os.Getenv("BTDEEPSEEK_TOKEN"),

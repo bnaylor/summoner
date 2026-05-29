@@ -50,7 +50,7 @@ All commands @mention the Summoner bot.
 
 | Token | Values |
 |---|---|
-| `model` | `claude`, `gemini`, `deepseek`, `both` |
+| `model` | `claude`, `gemini`, `deepseek` |
 | `variant` | `opus` `sonnet` `haiku` (Claude) · `pro` `flash` (Gemini) · omit for default |
 | `prompt` | rest of message — opening context for the session |
 
@@ -59,8 +59,9 @@ All commands @mention the Summoner bot.
 @Summoner claude opus we need deep reasoning on this tradeoff
 @Summoner gemini pro take a look at what we've got in /shared/myproject
 @Summoner deepseek what are the tradeoffs on these storage backends?
-@Summoner both we're stuck on an architecture decision, fresh eyes needed
 ```
+
+To bring in multiple models, use `@Summoner roundtable` instead.
 
 ### Roundtable
 

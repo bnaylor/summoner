@@ -2,11 +2,13 @@ package spawner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // Config holds spawn configuration loaded from environment at startup.
@@ -64,13 +66,34 @@ func (s *Spawner) Spawn(ctx context.Context, name, variant, payload string) erro
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
-		slog.Error("agent exited with error", "model", name, "error", err,
-			"stdout", stdout.String(), "stderr", stderr.String())
+	start := time.Now()
+	err := cmd.Run()
+	elapsed := time.Since(start).Round(time.Millisecond)
+
+	if err != nil {
+		exitCode := -1
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			exitCode = exitErr.ExitCode()
+		}
+		slog.Error("agent exited with error",
+			"model", name,
+			"elapsed", elapsed,
+			"exit_code", exitCode,
+			"error", err,
+			"stdout", stdout.String(),
+			"stderr", stderr.String(),
+		)
 		return fmt.Errorf("spawn %s: %w", name, err)
 	}
 
-	slog.Info("agent exited cleanly", "model", name)
+	slog.Info("agent exited cleanly", "model", name, "elapsed", elapsed)
+	if out := stdout.String(); out != "" {
+		slog.Debug("agent stdout", "model", name, "output", out)
+	}
+	if serr := stderr.String(); serr != "" {
+		slog.Warn("agent stderr on clean exit", "model", name, "stderr", serr)
+	}
 	return nil
 }
 

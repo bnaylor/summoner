@@ -260,3 +260,13 @@ Update the NFS host in `deploy/deployment.yaml`, then:
 ```bash
 kubectl apply -f deploy/deployment.yaml
 ```
+
+### Private channels
+
+Bots don't automatically see private channels — each bot must be explicitly granted access.
+
+**Recommended:** create a single `summoner-bots` role in your server, assign it to all four bots (Summoner, BTClaude, BTGemini, BTDeepseek), then add that role to any private channel you want them in. One permission entry per channel instead of four.
+
+To add the role to a private channel: right-click the channel → **Edit Channel** → **Permissions** → **+** next to Roles/Members → select `summoner-bots` → grant **View Channel**, **Read Message History**, and **Send Messages**.
+
+To add the role to a bot: Server Settings → Members → find the bot → assign the role.

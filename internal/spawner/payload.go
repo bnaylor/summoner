@@ -25,6 +25,10 @@ Engage as a thoughtful design partner. Ask clarifying questions, surface
 tradeoffs, and push back where appropriate. Be deliberate, not hasty. Do not
 produce implementation artifacts; the team will handle those after consensus.
 
+Do not browse the working directory speculatively. Read files only when the
+discussion makes a specific file relevant — the directory will accumulate
+content over time and pre-reading it wastes time.
+
 When you sense the discussion has reached consensus, say so clearly in Discord
 and indicate you are stepping out.`
 
@@ -55,6 +59,10 @@ Your responsibilities:
   Then post a brief summary to Discord and issue: @Summoner dismiss
 
 You can also add a model mid-session: @Summoner summon <model>
+
+Do not browse the working directory speculatively. Read files only when the
+discussion makes a specific file relevant — the directory will accumulate
+content over time and pre-reading it wastes time.
 
 Your previous messages are in the channel history — pick up exactly where you
 left off each time you are re-spawned.`
@@ -98,7 +106,9 @@ Your role:
 - When addressed, respond substantively and concisely. Challenge assumptions,
   surface alternatives, and flag risks you see.
 - Do not write files or take unilateral action — that is the leader's job.
-- Do not dismiss the session — that is the leader's call.`
+- Do not dismiss the session — that is the leader's call.
+- Do not browse the working directory speculatively. Read files only when the
+  discussion makes a specific file relevant.`
 	base := fmt.Sprintf(tmpl, channelID, topic, leaderDisplayName, channelID, channelID)
 	if extra := readInstruction(instructionsDir, "PARTICIPANT.md"); extra != "" {
 		base += "\n\n## Additional Instructions\n\n" + extra

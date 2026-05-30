@@ -293,8 +293,8 @@ func handleRoundtable(
 
 	leaderDisplayName := agentDisplayName(leaderModel, cmd.Variant)
 	instructionsDir := filepath.Join(cfg.workDir, "instructions")
-	leaderPayload := spawner.FormatLeaderPayload(cmd.Prompt, cfg.artifactsDir, participantDisplayNames, instructionsDir)
-	participantPayload := spawner.FormatParticipantPayload(cmd.Prompt, leaderDisplayName, instructionsDir)
+	leaderPayload := spawner.FormatLeaderPayload(channelID, cmd.Prompt, cfg.artifactsDir, participantDisplayNames, instructionsDir)
+	participantPayload := spawner.FormatParticipantPayload(channelID, cmd.Prompt, leaderDisplayName, instructionsDir)
 
 	_ = client.Send(channelID, fmt.Sprintf("Starting roundtable. **%s** is leading. Summoning participants...", leaderDisplayName))
 
@@ -334,7 +334,7 @@ func handleSummon(
 	timeout time.Duration,
 ) {
 	sess := mgr.GetOrCreate(channelID)
-	payload := spawner.FormatPayload(cmd.Prompt)
+	payload := spawner.FormatPayload(channelID, cmd.Prompt)
 
 	for _, name := range modelsFromSummonCommand(cmd) {
 		if sess.HasModel(name) {

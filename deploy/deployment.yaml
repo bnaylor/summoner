@@ -28,6 +28,8 @@ spec:
             - secretRef:
                 name: summoner-secrets
           env:
+            - name: HOME
+              value: /home/agent
             - name: WORK_DIR
               value: /nfs/shared
             - name: ARTIFACTS_DIR

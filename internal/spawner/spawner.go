@@ -101,7 +101,7 @@ func (s *Spawner) buildCmd(ctx context.Context, name, variant, payload string) (
 	switch name {
 	case "claude":
 		modelID := resolveModel(variant, claudeModels, s.cfg.ClaudeDefaultModel)
-		args := []string{"-p", payload}
+		args := []string{"--dangerously-skip-permissions", "-p", payload}
 		if modelID != "" {
 			args = append([]string{"--model", modelID}, args...)
 		}
@@ -123,7 +123,7 @@ func (s *Spawner) buildCmd(ctx context.Context, name, variant, payload string) (
 
 	case "deepseek":
 		modelID := s.cfg.DeepseekDefaultModel
-		args := []string{"-p", payload}
+		args := []string{"--dangerously-skip-permissions", "-p", payload}
 		if modelID != "" {
 			args = append([]string{"--model", modelID}, args...)
 		}

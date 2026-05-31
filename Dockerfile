@@ -47,7 +47,7 @@ RUN printf '#!/bin/sh\nexport HOME=/home/agent/deepseek-home\nexec /usr/local/bi
 RUN mkdir -p /home/agent/.gemini /home/agent/deepseek-home \
     && chown -R agent:agent /home/agent
 COPY deploy/gemini-settings.json /home/agent/.gemini/settings.json
-RUN chown /home/agent/.gemini/settings.json agent:agent
+RUN chown agent:agent /home/agent/.gemini/settings.json
 
 # Summoner binary
 COPY --from=builder /build/summoner /usr/local/bin/summoner

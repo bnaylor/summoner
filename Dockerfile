@@ -19,6 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Non-root user for all spawned agent processes.
+# --dangerously-skip-permissions is blocked when running as root,
+# so claude/claude-ds run as this user.
+RUN useradd -r -u 999 -m -d /home/agent agent
+
 # CLI tools — intentionally unpinned, rebuild weekly to stay current
 # gemini-cli is deprecated; antigravity-cli (agy) is its successor and uses
 # the same ~/.gemini/ config path.
@@ -31,19 +36,20 @@ RUN curl -fsSL https://raw.githubusercontent.com/earchibald/claude-ds/main/claud
     -o /usr/local/bin/_claude-ds && chmod +x /usr/local/bin/_claude-ds
 
 # HOME-override wrapper so claude-ds and its child `claude` process use
-# /root/deepseek-home instead of /root, keeping BTDeepseek's MCP config
-# (port 8087) separate from BTClaude's (port 8085).
-RUN printf '#!/bin/sh\nexport HOME=/root/deepseek-home\nexec /usr/local/bin/_claude-ds "$@"\n' \
+# /home/agent/deepseek-home, keeping BTDeepseek's MCP config (port 8087)
+# separate from BTClaude's (port 8085).
+RUN printf '#!/bin/sh\nexport HOME=/home/agent/deepseek-home\nexec /usr/local/bin/_claude-ds "$@"\n' \
     > /usr/local/bin/claude-ds && chmod +x /usr/local/bin/claude-ds
 
-# MCP configs for summoned agents
+# MCP configs for summoned agents under the agent user's home.
 # claude-code reads ~/.claude/settings.json
-# gemini-cli reads ~/.gemini/settings.json
+# agy reads ~/.gemini/settings.json
 # claude-ds reads ~/deepseek-home/.claude/settings.json (via HOME override above)
-RUN mkdir -p /root/.claude /root/.gemini /root/deepseek-home/.claude
-COPY deploy/claude-settings.json /root/.claude/settings.json
-COPY deploy/gemini-settings.json /root/.gemini/settings.json
-COPY deploy/claude-ds-settings.json /root/deepseek-home/.claude/settings.json
+RUN mkdir -p /home/agent/.claude /home/agent/.gemini /home/agent/deepseek-home/.claude
+COPY deploy/claude-settings.json /home/agent/.claude/settings.json
+COPY deploy/gemini-settings.json /home/agent/.gemini/settings.json
+COPY deploy/claude-ds-settings.json /home/agent/deepseek-home/.claude/settings.json
+RUN chown -R agent:agent /home/agent
 
 # Summoner binary
 COPY --from=builder /build/summoner /usr/local/bin/summoner

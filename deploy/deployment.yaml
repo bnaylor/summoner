@@ -18,6 +18,9 @@ spec:
         - name: summoner
           image: summoner:latest
           imagePullPolicy: Always
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
           ports:
             - containerPort: 8080
               name: healthz

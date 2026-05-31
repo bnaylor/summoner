@@ -41,18 +41,11 @@ RUN curl -fsSL https://raw.githubusercontent.com/earchibald/claude-ds/main/claud
 RUN printf '#!/bin/sh\nexport HOME=/home/agent/deepseek-home\nexec /usr/local/bin/_claude-ds "$@"\n' \
     > /usr/local/bin/claude-ds && chmod +x /usr/local/bin/claude-ds
 
-# Register discord-mcp servers via claude mcp add so the config is written in
-# exactly the format claude-code expects (~/.claude.json, not settings.json).
-# Run as agent so the files land under /home/agent.
+# MCP config for agy (BTGemini) — ~/.gemini/settings.json.
+# BTClaude and BTDeepseek MCP configs are written to ~/.claude.json at
+# container startup by entrypoint.sh (requires runtime API key; can't bake in).
 RUN mkdir -p /home/agent/.gemini /home/agent/deepseek-home \
     && chown -R agent:agent /home/agent
-USER agent
-# BTClaude → port 8085
-RUN HOME=/home/agent claude mcp add --transport sse discord http://localhost:8085/mcp
-# BTDeepseek → port 8087 (claude-ds overrides HOME to deepseek-home)
-RUN HOME=/home/agent/deepseek-home claude mcp add --transport sse discord http://localhost:8087/mcp
-USER root
-# agy reads ~/.gemini/settings.json
 COPY deploy/gemini-settings.json /home/agent/.gemini/settings.json
 RUN chown /home/agent/.gemini/settings.json agent:agent
 

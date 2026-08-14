@@ -84,7 +84,13 @@ func (s *Spawner) Spawn(ctx context.Context, name, variant, payload string) erro
 			"stdout", stdout.String(),
 			"stderr", stderr.String(),
 		)
-		return fmt.Errorf("spawn %s: %w", name, err)
+		return &SpawnError{
+			Model:    name,
+			ExitCode: exitCode,
+			Stdout:   stdout.String(),
+			Stderr:   stderr.String(),
+			Err:      err,
+		}
 	}
 
 	slog.Info("agent exited cleanly", "model", name, "elapsed", elapsed)
@@ -143,4 +149,45 @@ func resolveModel(variant string, table map[string]string, defaultModel string) 
 		}
 	}
 	return defaultModel
+}
+
+// SpawnError describes a failed CLI spawn, carrying the captured output so
+// callers can surface the underlying cause (e.g. "Credit balance is too low").
+type SpawnError struct {
+	Model    string
+	ExitCode int
+	Stdout   string
+	Stderr   string
+	Err      error
+}
+
+func (e *SpawnError) Error() string {
+	return fmt.Sprintf("spawn %s: %v", e.Model, e.Err)
+}
+
+func (e *SpawnError) Unwrap() error { return e.Err }
+
+// Cause returns the CLI's own explanation of the failure, preferring stdout
+// then stderr, and falling back to the exit code or the wrapped error.
+func (e *SpawnError) Cause() string {
+	for _, s := range []string{e.Stdout, e.Stderr} {
+		if t := strings.TrimSpace(s); t != "" {
+			return oneLine(t)
+		}
+	}
+	if e.ExitCode >= 0 {
+		return fmt.Sprintf("exit status %d", e.ExitCode)
+	}
+	return e.Err.Error()
+}
+
+// oneLine collapses arbitrary whitespace (including newlines) to single spaces
+// and caps length so a failure stays readable as a single chat line.
+func oneLine(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	const max = 200
+	if len(s) > max {
+		s = s[:max] + "…"
+	}
+	return s
 }

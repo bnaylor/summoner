@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -136,7 +137,7 @@ func main() {
 		for _, model := range models {
 			go func() {
 				if err := sp.Spawn(ctx, model.Name, model.Variant, model.Prompt); err != nil {
-					slog.Error("spawn error", "model", model.Name, "error", err)
+					reportSpawnError(client, channelID, "spawn error", model.Name, model.Variant, err)
 				}
 			}()
 		}
@@ -220,7 +221,7 @@ func handleRoundtableMessage(
 				}
 				go func() {
 					if err := sp.Spawn(ctx, model.Name, model.Variant, model.Prompt); err != nil {
-						slog.Error("participant spawn error", "model", model.Name, "error", err)
+						reportSpawnError(client, channelID, "participant spawn error", model.Name, model.Variant, err)
 					}
 				}()
 			}
@@ -246,7 +247,7 @@ func handleRoundtableMessage(
 	}
 	go func() {
 		if err := sp.Spawn(ctx, leaderModel.Name, leaderModel.Variant, leaderModel.Prompt); err != nil {
-			slog.Error("leader spawn error", "error", err)
+			reportSpawnError(client, channelID, "leader spawn error", leaderModel.Name, leaderModel.Variant, err)
 		}
 	}()
 	sess.ResetTimer(cfg.inactivityTimeout, func() {
@@ -312,7 +313,7 @@ func handleRoundtable(
 		_ = client.Send(channelID, fmt.Sprintf("Summoning **%s**...", displayName))
 		go func() {
 			if err := sp.Spawn(ctx, modelName, variant, payload); err != nil {
-				slog.Error("roundtable spawn error", "model", modelName, "error", err)
+				reportSpawnError(client, channelID, "roundtable spawn error", modelName, variant, err)
 			}
 		}()
 	}
@@ -344,7 +345,7 @@ func handleSummon(
 		sess.AddModel(name, cmd.Variant, payload)
 		go func() {
 			if err := sp.Spawn(ctx, name, cmd.Variant, payload); err != nil {
-				slog.Error("initial spawn error", "model", name, "error", err)
+				reportSpawnError(client, channelID, "initial spawn error", name, cmd.Variant, err)
 			}
 		}()
 	}
@@ -364,6 +365,26 @@ func handleDismiss(client *discord.Client, mgr *session.Manager, channelID strin
 		_ = client.Send(channelID, fmt.Sprintf("**%s** is leaving. o7", agentDisplayName(m.Name, m.Variant)))
 	}
 	mgr.Remove(channelID)
+}
+
+// reportSpawnError logs a spawn failure and surfaces it to the Discord channel
+// so a silent crash (e.g. an agent CLI exiting on exhausted API credit) doesn't
+// just look like the bot stopped responding.
+func reportSpawnError(client *discord.Client, channelID, logCtx, model, variant string, err error) {
+	slog.Error(logCtx, "model", model, "error", err)
+	cause := ""
+	var se *spawner.SpawnError
+	if errors.As(err, &se) {
+		cause = se.Cause()
+	}
+	msg := fmt.Sprintf("⚠️ **%s** failed to start", agentDisplayName(model, variant))
+	if cause != "" {
+		msg += ": " + cause
+	}
+	msg += "."
+	if sendErr := client.Send(channelID, msg); sendErr != nil {
+		slog.Error("failed to surface spawn error to chat", "error", sendErr)
+	}
 }
 
 func announceInactiveDeparture(client *discord.Client, mgr *session.Manager, channelID string, models []session.ActiveModel) {

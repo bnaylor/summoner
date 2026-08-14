@@ -6,13 +6,13 @@
 # requires an API key that isn't present during docker build.
 # claude merges its runtime state (feature flags etc.) into the existing file
 # on first run, so seeding it here is safe.
-printf '{"mcpServers":{"discord":{"type":"sse","url":"http://localhost:8085/mcp"}}}\n' \
+printf '{"mcpServers":{"discord":{"type":"http","url":"http://localhost:8085/mcp"}}}\n' \
     > /home/agent/.claude.json
 
 # Same for BTDeepseek — claude-ds overrides HOME to /home/agent/deepseek-home
 # so it reads a separate .claude.json pointing at port 8087.
 mkdir -p /home/agent/deepseek-home
-printf '{"mcpServers":{"discord":{"type":"sse","url":"http://localhost:8087/mcp"}}}\n' \
+printf '{"mcpServers":{"discord":{"type":"http","url":"http://localhost:8087/mcp"}}}\n' \
     > /home/agent/deepseek-home/.claude.json
 
 # Write the claude-ds API config from DEEPSEEK_API_KEY.
